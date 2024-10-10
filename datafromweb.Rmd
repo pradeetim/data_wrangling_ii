@@ -1,0 +1,13 @@
+---
+title: "datafromweb"
+author: "Pradeeti Mainali"
+date: "2024-10-10"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(rvest)
+library(httr)
+```
+
