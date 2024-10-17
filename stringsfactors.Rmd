@@ -1,0 +1,280 @@
+---
+title: "Strings and Factors"
+output: github_document
+---
+
+```{r, include = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+Load the necessary libraries. 
+
+```{r}
+library(rvest)
+library(p8105.datasets)
+```
+
+
+
+
+## Let's do strings
+
+```{r}
+string_vec = c("my", "name", "is", "jeff")
+
+str_detect(string_vec, "jeff")
+
+str_replace(string_vec, "jeff", "Jeff")
+
+str_replace(string_vec, "e", "E")
+```
+
+
+
+```{r}
+string_vec = c(
+  "i think we all rule for participating",
+  "i think i have been caught",
+  "i think this will be quite fun actually",
+  "it will be fun, i think"
+  )
+
+str_detect(string_vec, "i think")
+
+str_detect(string_vec, "^i think")
+str_detect(string_vec, "i think$")
+```
+
+
+```{r}
+string_vec = c(
+  "Time for a Pumpkin Spice Latte!",
+  "went to the #pumpkinpatch last weekend",
+  "Pumpkin Pie is obviously the best pie",
+  "SMASHING PUMPKINS -- LIVE IN CONCERT!!"
+  )
+
+
+str_detect(string_vec, "pumpkin")
+
+str_detect(string_vec, "Pumpkin")
+
+str_detect(string_vec, "PUMPKIN")
+
+str_detect(string_vec, "[Pp]umpkin")
+```
+
+
+```{r}
+string_vec = c(
+  '7th inning stretch',
+  '1st half soon to begin. Texas won the toss.',
+  'she is 5 feet 4 inches tall',
+  '3AM - cant sleep :('
+  )
+
+str_detect(string_vec, "[0-9][a-zA-Z]")
+
+```
+
+A lil weirder ...
+
+```{r}
+string_vec = c(
+  'Its 7:11 in the evening',
+  'want to go to 7-11?',
+  'my flight is AA711',
+  'NetBios: scanning ip 203.167.114.66'
+  )
+
+str_detect(string_vec, "7.11")
+```
+
+how things start to get real strange
+
+
+```{r}
+string_vec = c(
+  'The CI is [2, 5]',
+  ':-]',
+  ':-[',
+  'I found the answer on pages [6-7]'
+  )
+
+str_detect(string_vec, "\\[")
+```
+
+
+## Factors ...
+
+```{r}
+sex_vec = factor(c("male", "male", "female", "female"))
+
+as.numeric(sex_vec)
+```
+
+do some releveling ...
+
+```{r}
+sex_vec = fct_relevel(sex_vec, "male")
+
+as.numeric(sex_vec)
+```
+
+
+
+
+## Revisit a lot of examples!!
+
+NSDUH
+
+```{r}
+url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+drug_use_html = read_html(url)
+```
+
+Get the pieces I actually need.
+
+```{r}
+marj_use_df = 
+  drug_use_html |> 
+  html_table() |> 
+  first() |> 
+  slice(-1) |> 
+  select(-contains("P Value")) |> 
+  pivot_longer(
+    cols = -State,
+    names_to = "age_year",
+    values_to = "percent"
+  ) |> 
+  separate(age_year, into = c("age", "year"), sep = "\\(") |> 
+  mutate(
+    year = str_replace(year, "\\)", ""), 
+    percent = str_remove(percent, "[a-c]$"),
+    percent = as.numeric(percent)
+  )
+```
+
+```{r}
+marj_use_df |> 
+  filter(
+    age == "12-17",
+    !(State %in% c("Total U.S.", "South"))) |> 
+  mutate(
+    State = fct_reorder(State, percent)
+  ) |> 
+  ggplot(aes(x = State, y = percent, color = year)) + 
+  geom_point() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+
+## NYC Restaurant Inspections
+
+```{r}
+data("rest_inspec")
+
+
+```
+
+```{r}
+rest_inspec |> 
+  count(boro, grade) |> 
+  pivot_wider(
+    names_from = grade,
+    values_from = n
+  )
+```
+
+```{r}
+rest_inspec =
+  rest_inspec |> 
+  filter(
+    str_detect(grade, "[A-C]"),
+    !(boro == "Missing")
+  )
+```
+
+
+```{r}
+rest_inspec |> 
+  mutate(dba = str_to_sentence(dba)) |> 
+  filter(str_detect(dba, "Pizza"))
+```
+
+
+```{r}
+rest_inspec |> 
+  mutate(dba = str_to_sentence(dba)) |> 
+  filter(str_detect(dba, "Pizza")) |> 
+  mutate(boro = fct_infreq(boro)) |> 
+  ggplot(aes(x = boro)) + 
+  geom_bar()
+```
+
+
+
+```{r}
+rest_inspec |> 
+  mutate(dba = str_to_sentence(dba)) |> 
+  filter(str_detect(dba, "Pizza")) |> 
+  mutate(boro = fct_relevel(boro, "STATEN ISLAND")) |> 
+  ggplot(aes(x = boro)) + 
+  geom_bar()
+```
+
+
+```{r}
+rest_inspec |> 
+  mutate(dba = str_to_sentence(dba)) |> 
+  filter(str_detect(dba, "Pizza")) |> 
+  mutate(
+    boro = fct_infreq(boro),
+    boro = str_replace(boro, "MANHATTAN", "THE CITY")
+    ) |> 
+  ggplot(aes(x = boro)) + 
+  geom_bar()
+```
+
+
+```{r}
+rest_inspec |> 
+  mutate(dba = str_to_sentence(dba)) |> 
+  filter(str_detect(dba, "Pizza")) |> 
+  mutate(
+    boro = fct_infreq(boro),
+    boro = fct_recode(boro, "THE CITY" = "MANHATTAN"),
+    ) |> 
+  ggplot(aes(x = boro)) + 
+  geom_bar()
+```
+
+
+One last thing on factors...
+
+```{r}
+rest_inspec |> 
+  mutate(dba = str_to_sentence(dba)) |> 
+  filter(str_detect(dba, "Pizza")) |> 
+  mutate(boro = fct_infreq(boro)) |> 
+  lm(zipcode ~ boro, data = _)
+```

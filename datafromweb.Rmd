@@ -5,9 +5,111 @@ date: "2024-10-10"
 output: github_document
 ---
 
+loading necessary libraries: 
+
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(rvest)
 library(httr)
+```
+
+# Extracting tables: 
+
+```{r}
+url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+drug_use_html = read_html(url)
+
+```
+
+get the pieces I actually need.
+
+```{r}
+marj_use_df = 
+drug_use_html |>
+  html_table() |>
+# spits out the table you are looking for
+  first() |> #takes the first element out of a table
+  slice(-1)
+
+# still not really tidy
+```
+
+### Learning assesment:
+
+```{r}
+nyc_cost_df = 
+  read_html("https://www.bestplaces.net/cost_of_living/city/new_york/new_york") |>
+  html_table(header=TRUE) |>
+  #header = true will let it know that the first row is the header.
+  first()
+```
+
+# CSS Selectors
+
+```{r}
+swm_html = read_html("https://www.imdb.com/list/ls070150896/")
+```
+
+```{r}
+swm_title_vec =
+swm_html |>
+  #define CSS here. use html_elementS
+  html_elements(".ipc-title-link-wrapper .ipc-title__text") |>
+  html_text()
+
+swm_runtime_vec =
+swm_html |>
+  html_elements(".dli-title-metadata-item:nth-child(2)") |>
+  html_text()
+
+swm_score_vec =
+swm_html |>
+  html_elements(".metacritic-score-box") |>
+  html_text()
+
+swm_df = 
+  tibble(
+    title = swm_title_vec,
+    runtime = swm_runtime_vec,
+    score = swm_score_vec
+  )
+
+```
+
+Lets import some books
+
+```{r}
+books_html = read_html("https://books.toscrape.com/") |>
+  html_elements(".product_pod a") |>
+  html_text()
+```
+
+# Using an API
+
+```{r}
+nyc_water = 
+  GET("https://data.cityofnewyork.us/resource/ia2d-e54m.csv") |> 
+  content()
+```
+
+```{r}
+brfss_smart2010 = 
+  GET("https://chronicdata.cdc.gov/resource/acme-vg9e.csv", query = list("$limit" = 5000)) |>
+  # changing limit parameter will let you get more than 1000 obs
+  # this is only for this specific API because they gave us this instruction
+  content()
+```
+
+Pokemon API:
+
+```{r}
+pokemon = 
+  GET("http://pokeapi.co/api/v2/pokemon/ditto") |>
+  content()
+
+pokemon$height
+pokemon$abilities
+
 ```
 
